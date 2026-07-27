@@ -2,7 +2,9 @@ import argparse
 from typing import Any
 
 VALID_HUBS = ["start_hub:", "hub:", "end_hub:"]
-VALID_CONNECTION = "connection:"
+VALID_CONNECTION = ["connection:"]
+VALID_METADATA_HUB = ["zone", "color", "max_drones"]
+
 def map_picker():
     parser = argparse.ArgumentParser(
         description="Fly-in: Implementation of pathfinder with the least number of turns"
@@ -15,22 +17,47 @@ def map_picker():
     )
     return parser.parse_args()
 
+
 class Parser:
 
     def __init__(self):
-        self.corrected_data = {} 
+        self.nb_drones: int = 0
+        self.hubs: list[str] = []
 
-    def parse_lines(self, map_data: list[str]):
+
+
+    def parse_lines(self, map_data: list[str]) -> list[str]:
         nb_drones: int = 0
         hubs: list[str] = []
         connect: list[str] = []
-        splitted: list[str] = []
+        valid_lines: list[str] = []
         for line in map_data:
             if line.startswith('#') or line == '\n':
                 continue
             splitted = line.split(' ')
+            if line.startswith('nb_drones:'):
+                if nb_drones == 0 and len(splitted) == 2:
+                    try:
+                        x = int(splitted[1])
+                        if x < 1:
+                            raise Exception(
+                                f"ERROR: Number of drones should be a positive nummber."
+                            )
+                        self.nb_drones = x
+                    except ValueError:
+                        raise Exception(
+                            f"Data assigned to line '{line}' is not valid...\n"
+                            "ERROR: Number of drones should be an int."
+                        )
+                    valid_lines.append(line.strip('\n'))
+                    nb_drones = 1
+                    continue
+                else:
+                    raise Exception(
+                    f"Data assign to line '{line}' is not valid..."
+                )
             if splitted[0] in VALID_HUBS:
-                if not 4 <= len(splitted) <= 5 :
+                if not 4 <= len(splitted) <= 7:
                     raise Exception(
                         f"Data assigned to line {line} is not valid..."
                     )
@@ -45,23 +72,103 @@ class Parser:
                         "ERROR: You can assign only 1 end_hub."
                     )
                 else:
+                    valid_lines.append(line.strip('\n'))
                     hubs.append(splitted[0])
             elif splitted[0] in VALID_CONNECTION:
                 if not 2 <= len(splitted) <= 3 :
                     raise Exception(
                         f"Data assigned to line {line} is not valid..."
+                        "ERROR: Connection is wrong."
                     )
-                connect.append(splitted[0])
+                valid_lines.append(line.strip('\n')) 
             else:
                 raise Exception(
                     f"Data assigned to line {line} is not valid..."
+                    "ERROR: You have to assign a 'VALID_HUB' or 'VALID_CONNECTION'."
                 )
-        print(f"Hubs: {hubs}")
-        print(f"Connections: {connect}")
+        if not "start_hub:" in hubs or not "end_hub:" in hubs:
+            raise Exception(
+                f"ERROR: You should provide a 'start_hub' and 'end_hub'."
+            )
+        self.hubs = hubs
+        if self.nb_drones == 0:
+            raise Exception(
+                f"ERROR: Number of drones was not provided..."
+            )
+        #print(f"Valid lines: {valid_lines}")
+        return valid_lines
 
-        
+    def parse_data(self, valid_lines: list[str]):
+        splitted: list[str] = []
+        hub_name_checker: list[str] = []
 
+        for line in valid_lines:
+            splitted = line.split()
+            if splitted[0] in VALID_HUBS:
+                try:
+                    a = int(splitted[2])
+                    b = int(splitted[3])
+                except ValueError:
+                    raise Exception(
+                        f"Data assigned to line '{line}' is not valid...\n"
+                        "ERROR: You should provide valid integers for the hub coordinates."
+                    )
+                if splitted[1] in hub_name_checker:
+                    raise Exception(
+                        f"Data assigned to line '{line}' is not valid...\n"
+                        "ERROR: You should provide different names for each hub."
+                    )
+                hub_name_checker.append(str(splitted[1]))
+                try:
+                    print(self.parse_metadata(splitted[4:], "hub"))
+                except Exception as e:
+                    raise Exception(e)
 
+    def parse_metadata(self, metadata: list[str], kind: str):
+        joined: str = ""
+        result: dict[str, str] = {} 
+        if kind == "hub":
+            joined = " ".join(metadata)
+            if not joined.startswith('[') or not joined.endswith(']'):
+                raise Exception(
+                    f"Data assigned to {metadata} is not valid..."
+                    "ERROR: The metadata provided is not correct."
+                )
+            cleaned = joined[1:-1]
+            splitted = cleaned.split()
+            for i in splitted:
+                if i.count('=') != 1:
+                    raise Exception(
+                        f"ERROR: You should provide an equal sign in '{metadata}'."
+                    )
+                key, value = i.split('=')
+                if key not in VALID_METADATA_HUB:
+                    raise Exception(
+                        f"ERROR: You should provide valid metadata."
+                    )
+                if key in result:
+                    raise Exception(
+                        f"ERROR: Duplicate metadata."
+                    )
+                if key == "zone":
+                    valid = ["restricted", "blocked", "priority"]
+                    if value not in valid:
+                        raise Exception(
+                            f"ERROR: Value provided in the metadata is not allowed."
+                        )
+                elif key == "max_drones":
+                    try:
+                        x = int(value)
+                        if x < 1:
+                            raise Exception(
+                                "ERROR: Max drones should be a positive integer."
+                            )
+                    except ValueError:
+                        raise Exception(
+                            "ERROR: Max drones should be a positivei integer."
+                        )
+                result[key] = value
+            return result
 
 ## We have to first extract the information from the files in maps...
 

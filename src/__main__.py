@@ -5,6 +5,7 @@ def main():
     args = map_picker()
     parse = Parser()
     data: list[str] = []
+    valid_lines: list[str] = []
     try:
         with open(args.input) as f:
             for l in f:
@@ -14,7 +15,8 @@ def main():
     except (FileNotFoundError, PermissionError) as e:
         sys.exit(e)
     try:
-        parse.parse_lines(data)
+        valid_lines = parse.parse_lines(data)
+        print(parse.parse_data(valid_lines))
     except Exception as e:
         sys.exit(e)
 
