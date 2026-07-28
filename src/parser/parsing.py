@@ -1,4 +1,6 @@
 import argparse
+from src.models.hubs import Hub
+from src.models.graph import Graph
 from typing import Any
 
 VALID_HUBS = ["start_hub:", "hub:", "end_hub:"]
@@ -23,8 +25,6 @@ class Parser:
     def __init__(self):
         self.nb_drones: int = 0
         self.hubs: list[str] = []
-
-
 
     def parse_lines(self, map_data: list[str]) -> list[str]:
         nb_drones: int = 0
@@ -101,6 +101,8 @@ class Parser:
     def parse_data(self, valid_lines: list[str]):
         splitted: list[str] = []
         hub_name_checker: list[str] = []
+        metadata_dict: dict[str, str] = {}
+        hubs = {}
 
         for line in valid_lines:
             splitted = line.split()
@@ -119,29 +121,61 @@ class Parser:
                         "ERROR: You should provide different names for each hub."
                     )
                 hub_name_checker.append(str(splitted[1]))
-                try:
-                    print(self.parse_metadata(splitted[4:], "hub"))
-                except Exception as e:
-                    raise Exception(e)
+                if len(splitted) > 4:
+                    try:
+                        metadata_dict = self.parse_metadata(splitted[4:], "hub")
+                    except Exception as e:
+                        raise Exception(e)
+                hub = Hub(
+                    hub_type=splitted[0].rstrip(':'),
+                    name=splitted[1],
+                    x=a,
+                    y=b,
+                    color=metadata_dict.get('color', 'blue'),
+                    zone_type=metadata_dict.get('zone', 'normal'),
+                    max_drones=int(metadata_dict.get('max_drones', 1)),
+                )
+                hubs[hub.name] = hub
+                
+                if hub.hub_type == "start_hub":
+                    start_hub_name = hub.name
+                elif hub.hub_type == "end_hub":
+                    end_hub_name = hub.name
+            elif splitted[0] in VALID_CONNECTION:
+                if len(splitted) > 2:
+                    try:
+                        metadata_dict = self.parse_metadata(splitted[2:], "connection")
+                    except Exception as e:
+                        raise Exception(e)
+
+
+        return Graph(
+            nb_drones = self.nb_drones,
+            start_hub = start_hub_name,
+            end_hub = end_hub_name,
+            hubs = hubs,
+            connections = [],
+        )
 
     def parse_metadata(self, metadata: list[str], kind: str):
         joined: str = ""
         result: dict[str, str] = {} 
-        if kind == "hub":
-            joined = " ".join(metadata)
-            if not joined.startswith('[') or not joined.endswith(']'):
+        
+        joined = " ".join(metadata)
+        if not joined.startswith('[') or not joined.endswith(']'):
+            raise Exception(
+                f"Data assigned to {metadata} is not valid..."
+                "ERROR: The metadata provided is not correct."
+            )
+        cleaned = joined[1:-1]
+        splitted = cleaned.split()
+        for i in splitted:
+            if i.count('=') != 1:
                 raise Exception(
-                    f"Data assigned to {metadata} is not valid..."
-                    "ERROR: The metadata provided is not correct."
+                    f"ERROR: You should provide an equal sign in '{metadata}'."
                 )
-            cleaned = joined[1:-1]
-            splitted = cleaned.split()
-            for i in splitted:
-                if i.count('=') != 1:
-                    raise Exception(
-                        f"ERROR: You should provide an equal sign in '{metadata}'."
-                    )
-                key, value = i.split('=')
+            key, value = i.split('=')
+            if kind == "hub":
                 if key not in VALID_METADATA_HUB:
                     raise Exception(
                         f"ERROR: You should provide valid metadata."
@@ -162,13 +196,29 @@ class Parser:
                         if x < 1:
                             raise Exception(
                                 "ERROR: Max drones should be a positive integer."
-                            )
+                          )
                     except ValueError:
                         raise Exception(
                             "ERROR: Max drones should be a positivei integer."
                         )
                 result[key] = value
-            return result
+            elif kind == "connection":
+                if key != "max_link_capacity":
+                    raise Exception(
+                        f"ERROR: Wrong metadata provided in '{metadata}'."
+                    )
+                try:
+                    x = int(value)
+                    if x < 1:
+                        raise Exception(
+                            f"ERROR: Max_link_capacity should receive a positive number as value."
+                        )
+                except ValueError:
+                    raise Exception(
+                        f"ERROR: A number should be provided as value in '{metadata}'."
+                    )
+                result[key] = value
+        return result
 
 ## We have to first extract the information from the files in maps...
 

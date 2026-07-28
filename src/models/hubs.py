@@ -8,6 +8,6 @@ class Hub:
     name: str
     x: int
     y: int
-    color: str | None = None
-    zone_type: str = "normal"
-    max_drones: int = 1
+    color: str = ""
+    zone_type: str = ""
+    max_drones: int = 0
