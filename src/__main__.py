@@ -1,4 +1,5 @@
 from src.parser.parsing import map_picker, Parser
+from src.algorithm.pathfinder import Pathfinder
 import sys
 
 def main():
@@ -16,11 +17,13 @@ def main():
         sys.exit(e)
     try:
         valid_lines = parse.parse_lines(data)
-        print(parse.parse_data(valid_lines))
+        graph = parse.parse_data(valid_lines)
     except Exception as e:
         sys.exit(e)
 
-
+    path = Pathfinder(graph)
+    print(path.build_neighbors())
+    print(path.dijkstra())
 
 if __name__ == "__main__":
     main()
