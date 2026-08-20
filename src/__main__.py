@@ -1,5 +1,6 @@
 from src.parser.parsing import map_picker, Parser
 from src.algorithm.pathfinder import Pathfinder
+from src.algorithm.simulation import Simulation
 import sys
 
 def main():
@@ -21,9 +22,9 @@ def main():
     except Exception as e:
         sys.exit(e)
 
-    path = Pathfinder(graph)
-    print(path.build_neighbors())
-    print(path.dijkstra())
-
+    path_finder = Pathfinder(graph)
+    path = path_finder.dijkstra()
+    simulation = Simulation(graph, path)
+    simulation.sim()
 if __name__ == "__main__":
     main()

@@ -1,10 +1,11 @@
 from src.models.graph import Graph
 from src.models.hubs import Hub 
 import heapq
+import sys
 
 class Pathfinder:
 
-    def __init__(self, graph):
+    def __init__(self, graph: Graph):
         self.graph = graph
         self.neighbors = self.build_neighbors()
 
@@ -29,7 +30,7 @@ class Pathfinder:
         for conn in self.graph.connections:
             #First we are extracting the hub information to make sure we do not have blocked zone types.
             hub_a = self.graph.hubs[conn.hub_a]
-            hub_b = self.graph.hubs[conn.hub_a]
+            hub_b = self.graph.hubs[conn.hub_b]
 
             #If its not blocked we append it to the list attatched to the key.
             if hub_a.zone_type != "blocked":
@@ -44,8 +45,10 @@ class Pathfinder:
         start_hub: str = self.graph.start_hub
         end_hub: str = self.graph.end_hub
 
+        came_from = {} 
+
         #We have to make an array to keep track of which hubs we have already visted, as we begin from start hub its the first one we put inside.
-        visited = [start_hub]
+        visited = []
 
         #we need to keep track of the distances to reach each hub from the beggining and figure out the logic to keep always the shortest distance.
         distances = {}
@@ -57,18 +60,32 @@ class Pathfinder:
 
         pq = [(0, start_hub)]
         while pq:
+#            print(f"Priority queue: {pq}")
             cost, current = heapq.heappop(pq)
 
+            if current in visited:
+                continue
+            visited.append(current)
+#            print(f"Visited: {visited}")
             if current == end_hub:
-                print(f"DISTANCE: {distances}")
-                return "Path found!"
+#               print(f"DISTANCES: {distances}")
+                return self.reconstruct_path(came_from, end_hub, start_hub)
 
             for neighbor in self.neighbors[current]:
                 new_dist = cost + self.get_cost(neighbor)
                 if new_dist < distances[neighbor]:
                     distances[neighbor] = new_dist
-                    pq.append((new_dist, neighbor))
-            
+                    came_from[neighbor] = current
+                    heapq.heappush(pq, (new_dist, neighbor))
+        return None
 
-        return distances
-
+    def reconstruct_path(self, came_from: dict[str, str], end: str, start: str) -> list[str]:
+        drone_paths = {}
+        path = [end]
+        while path[-1] != start:
+            path.append(came_from[path[-1]])
+        i = 1
+        while i <= self.graph.nb_drones:
+            drone_paths[i] = path[::-1]
+            i += 1
+        return drone_paths
