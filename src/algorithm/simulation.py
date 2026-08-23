@@ -3,7 +3,6 @@ from src.models.drone import Drone
 
 
 
-
 class Simulation:
 
     def __init__(self, graph: Graph, drone_paths: dict[int, list[str]]):
@@ -11,11 +10,16 @@ class Simulation:
         self.drones = [Drone(id=id, path=path) for id, path in drone_paths.items()]
         self.hub_occupancy = {name: 0 for name in graph.hubs}
         self.turns = 0
+        self.conn_occupancy = {tuple(sorted((conn.hub_a, conn.hub_b))): 0 for conn in self.graph.connections}
+        self.link_capacity = {tuple(sorted((conn.hub_a, conn.hub_b))): conn.max_link_capacity for conn in self.graph.connections}
+        print(self.link_capacity)
+        print(self.conn_occupancy)
 
 
     def sim(self):
         while True:
             log = []
+            completed = []
             self.turns += 1
             for drone in self.drones:
                 if drone.status == "arrived":
@@ -24,13 +28,23 @@ class Simulation:
                 if drone.status == "in_transit":
                     drone.turns_left -= 1
                     if drone.turns_left == 0:
-                        result = self.complete_move(drone)
+                        result, edges = self.complete_move(drone)
+                        completed.append(edges)
                 elif drone.status == "waiting":
-                    result = self.try_move(drone)
+                    can_move = self.try_move(drone)
+                    if can_move:
+                        result, edges = self.complete_move(drone)
+                        completed.append(edges)
                 if result is not None:
                     log.append(result)
+            #print(f"Connection occupancy: ", completed)
+            print(f"Connection occupancy: ", self.conn_occupancy)
             if log:
                 print(" ".join(log))
+            for hubs in completed:
+                self.conn_occupancy[hubs] -= 1
+            #if completed:
+            #    self.update_conn(completed)
             if all(drone.status == "arrived" for drone in self.drones):
                 print(f"Turns: {self.turns}")
                 return
@@ -38,14 +52,19 @@ class Simulation:
     def try_move(self, drone: Drone):
         next_hub_name = drone.next_hub()
         next_hub = self.graph.hubs[next_hub_name]
-        if next_hub_name == self.graph.end_hub or self.hub_occupancy[next_hub_name] < next_hub.max_drones:
+        edges = tuple(sorted((drone.current_hub(), drone.next_hub())))
+        if next_hub_name == self.graph.end_hub or self.hub_occupancy[next_hub_name] < next_hub.max_drones and self.conn_occupancy[edges] < self.link_capacity[edges]:
+            self.conn_occupancy[edges] += 1
             self.hub_occupancy[next_hub_name] += 1
             if next_hub.zone_type == "restricted":
                 drone.turns_left = 1
                 drone.status = "in_transit"
-                return self.logging(drone, "wait")
+#                return self.logging(drone, "wait")
+                return False
             else:
-                return self.complete_move(drone)
+                #result, edges = self.complete_move(drone)
+                #return result, edges
+                return True
 
     def complete_move(self, drone: Drone):
         old_hub = drone.current_hub()
@@ -55,7 +74,7 @@ class Simulation:
             drone.status = "arrived"
         else:
             drone.status = "waiting"
-        return self.logging(drone, "move")
+        return self.logging(drone, "move"), tuple(sorted((old_hub, drone.current_hub())))
 
 
     def logging(self, drone: Drone, action: str) -> str:

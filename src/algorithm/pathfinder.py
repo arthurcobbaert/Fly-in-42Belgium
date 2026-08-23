@@ -45,7 +45,7 @@ class Pathfinder:
         start_hub: str = self.graph.start_hub
         end_hub: str = self.graph.end_hub
 
-        came_from = {} 
+        came_from: dict[str, list[str]] = {} 
 
         #We have to make an array to keep track of which hubs we have already visted, as we begin from start hub its the first one we put inside.
         visited = []
@@ -60,24 +60,48 @@ class Pathfinder:
 
         pq = [(0, start_hub)]
         while pq:
-#            print(f"Priority queue: {pq}")
             cost, current = heapq.heappop(pq)
 
             if current in visited:
                 continue
             visited.append(current)
-#            print(f"Visited: {visited}")
-            if current == end_hub:
-#               print(f"DISTANCES: {distances}")
-                return self.reconstruct_path(came_from, end_hub, start_hub)
+            #if current == end_hub:
+            #    return self.reconstruct_path(came_from, end_hub, start_hub)
 
             for neighbor in self.neighbors[current]:
                 new_dist = cost + self.get_cost(neighbor)
                 if new_dist < distances[neighbor]:
                     distances[neighbor] = new_dist
-                    came_from[neighbor] = current
+                    came_from[neighbor] = [current]
                     heapq.heappush(pq, (new_dist, neighbor))
-        return None
+                elif new_dist == distances[neighbor]:
+                    if current not in came_from.get(neighbor, []):
+                        came_from[neighbor].append(current)
+                        heapq.heappush(pq, (new_dist, neighbor))
+        return came_from, distances
+
+    def enumerate_shortest_paths(self, came_from: dict[str, list[str]]) -> list[list[str]]:
+        start_hub = self.graph.start_hub
+        end_hub = self.graph.end_hub
+        paths: list[list[str]] = []
+
+        def backtrack(current: str, path_so_far: list[str]):
+            if current == start_hub:
+                paths.append([start_hub] + path_so_far[::-1])
+                return
+            for predecessor in came_from.get(current, []):
+                backtrack(predecessor, path_so_far + [current])
+
+        backtrack(end_hub, [])
+        paths.sort(key=self.path_priority_score, reverse=True)
+        return paths
+
+    def path_priority_score(self, path: list[str]) -> int:
+        return sum(
+            1 for hub_name in path
+            if self.graph.hubs[hub_name].zone_type == "priority"
+        )
+
 
     def reconstruct_path(self, came_from: dict[str, str], end: str, start: str) -> list[str]:
         drone_paths = {}
@@ -89,3 +113,5 @@ class Pathfinder:
             drone_paths[i] = path[::-1]
             i += 1
         return drone_paths
+
+    

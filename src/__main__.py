@@ -23,8 +23,14 @@ def main():
         sys.exit(e)
 
     path_finder = Pathfinder(graph)
-    path = path_finder.dijkstra()
-    simulation = Simulation(graph, path)
+    came_from, distances = path_finder.dijkstra()
+    paths = path_finder.enumerate_shortest_paths(came_from)
+    print(f"PATHS: {paths}")
+
+    drone_paths = {}
+    for drone_id in range(graph.nb_drones):
+        drone_paths[drone_id + 1] = paths[drone_id % len(paths)]
+    simulation = Simulation(graph, drone_paths)
     simulation.sim()
 if __name__ == "__main__":
     main()
