@@ -2,21 +2,27 @@ from src.models.graph import Graph
 from src.models.drone import Drone
 
 
-
 class Simulation:
 
     def __init__(self, graph: Graph, drone_paths: dict[int, list[str]]):
         self.graph = graph
-        self.drones = [Drone(id=id, path=path) for id, path in drone_paths.items()]
+        self.drones = [
+            Drone(id=id, path=path) for id, path in drone_paths.items()
+        ]
         self.hub_occupancy = {name: 0 for name in graph.hubs}
         self.turns = 0
-        self.conn_occupancy = {tuple(sorted((conn.hub_a, conn.hub_b))): 0 for conn in self.graph.connections}
-        self.link_capacity = {tuple(sorted((conn.hub_a, conn.hub_b))): conn.max_link_capacity for conn in self.graph.connections}
-        print(self.link_capacity)
-        print(self.conn_occupancy)
-
+        self.conn_occupancy = {
+            tuple(sorted((conn.hub_a, conn.hub_b))): 0
+            for conn in self.graph.connections
+        }
+        self.link_capacity = {
+            tuple(sorted((conn.hub_a, conn.hub_b))): conn.max_link_capacity
+            for conn in self.graph.connections
+        }
+        # print(f"Link capacity: ", self.link_capacity)
 
     def sim(self):
+        events = []
         while True:
             log = []
             completed = []
@@ -29,25 +35,32 @@ class Simulation:
                     drone.turns_left -= 1
                     if drone.turns_left == 0:
                         result, edges = self.complete_move(drone)
-                        completed.append(edges)
+                        completed.append((drone.id, edges))
                 elif drone.status == "waiting":
                     can_move = self.try_move(drone)
                     if can_move:
                         result, edges = self.complete_move(drone)
-                        completed.append(edges)
+                        completed.append((drone.id, edges))
+                    elif drone.status == "in_transit":
+                        result = self.logging(drone, "wait")
                 if result is not None:
                     log.append(result)
-            #print(f"Connection occupancy: ", completed)
-            print(f"Connection occupancy: ", self.conn_occupancy)
+            # print(f"Connection occupancy: ", completed)
+            # print(f"Hub occupancy: {drone.current_hub()}")
             if log:
                 print(" ".join(log))
-            for hubs in completed:
-                self.conn_occupancy[hubs] -= 1
-            #if completed:
+            for drone_id, edge_key in completed:
+                self.conn_occupancy[edge_key] -= 1
+
+            turn_snapshot = {
+                drone.id: drone.current_hub() for drone in self.drones
+            }
+            events.append(turn_snapshot)
+            # if completed:
             #    self.update_conn(completed)
             if all(drone.status == "arrived" for drone in self.drones):
                 print(f"Turns: {self.turns}")
-                return
+                return events
 
     def try_move(self, drone: Drone):
         next_hub_name = drone.next_hub()
@@ -62,8 +75,8 @@ class Simulation:
 #                return self.logging(drone, "wait")
                 return False
             else:
-                #result, edges = self.complete_move(drone)
-                #return result, edges
+                # result, edges = self.complete_move(drone)
+                # return result, edges
                 return True
 
     def complete_move(self, drone: Drone):
@@ -76,7 +89,6 @@ class Simulation:
             drone.status = "waiting"
         return self.logging(drone, "move"), tuple(sorted((old_hub, drone.current_hub())))
 
-
     def logging(self, drone: Drone, action: str) -> str:
         if action == "move":
             return f"D{drone.id}-{drone.path[drone.position]}"
@@ -85,13 +97,13 @@ class Simulation:
             hub_b = drone.next_hub()
             return f"D{drone.id}-{hub_a}-{hub_b}"
 
-#We have to figure out the drones scheduling.
+# We have to figure out the drones scheduling.
 
-#The first drone will always follow the base path, whoch is the first one we find with dijkstra...
+# The first drone will always follow the base path, whoch is the first one we find with dijkstra...
 
-#But if we have multiple paths that are as shprt as the shortest path we should also use them...
+# But if we have multiple paths that are as shprt as the shortest path we should also use them...
 
-#We have to figure out some functions to be able to spread these drones in that case.
+# We have to figure out some functions to be able to spread these drones in that case.
 
 # 1. We already found the first path using the dijkstra we implemented
 
@@ -106,5 +118,3 @@ class Simulation:
 # 6. If its true th drone should move to the next hub, else he should wait.
 
 # 7. We will also create a tie breaker rule, so if 2 drones are looking to move into the same hub the one with the smallest dron_id always win.
-
-   

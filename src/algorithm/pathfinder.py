@@ -1,7 +1,6 @@
 from src.models.graph import Graph
-from src.models.hubs import Hub 
 import heapq
-import sys
+
 
 class Pathfinder:
 
@@ -16,41 +15,38 @@ class Pathfinder:
         elif self.graph.hubs[hub_name].zone_type == "restricted":
             return 2
         else:
-            sys.exit("Unexpected zone_type.")
-
+            return 99999
 
     def build_neighbors(self) -> dict:
         # Make a hashmap of which hubs are adjacent to eah hub
         neighbors: dict[str, str] = {}
 
-        #loops through the hubs creating key for each hub name we have.
+        # loops through the hubs creating key for each hub name we have.
         for key in self.graph.hubs:
             neighbors[key] = []
 
         for conn in self.graph.connections:
-            #First we are extracting the hub information to make sure we do not have blocked zone types.
+            # First we are extracting the hub information to make sure we do not have blocked zone types.
             hub_a = self.graph.hubs[conn.hub_a]
             hub_b = self.graph.hubs[conn.hub_b]
 
-            #If its not blocked we append it to the list attatched to the key.
+            # If its not blocked we append it to the list attatched to the key.
             if hub_a.zone_type != "blocked":
                 neighbors[conn.hub_a].append(conn.hub_b)
             if hub_b.zone_type != "blocked":
                 neighbors[conn.hub_b].append(conn.hub_a)
         return neighbors
 
-
     def dijkstra(self):
-        #We define the start and end hub to set where we start and end our operation.
+        # We define the start and end hub to set where we start and end our operation.
         start_hub: str = self.graph.start_hub
-        end_hub: str = self.graph.end_hub
 
-        came_from: dict[str, list[str]] = {} 
+        came_from: dict[str, list[str]] = {}
 
-        #We have to make an array to keep track of which hubs we have already visted, as we begin from start hub its the first one we put inside.
+        # We have to make an array to keep track of which hubs we have already visted, as we begin from start hub its the first one we put inside.
         visited = []
 
-        #we need to keep track of the distances to reach each hub from the beggining and figure out the logic to keep always the shortest distance.
+        # we need to keep track of the distances to reach each hub from the beggining and figure out the logic to keep always the shortest distance.
         distances = {}
         for name in self.graph.hubs:
             if name == start_hub:
@@ -65,7 +61,7 @@ class Pathfinder:
             if current in visited:
                 continue
             visited.append(current)
-            #if current == end_hub:
+            # if current == end_hub:
             #    return self.reconstruct_path(came_from, end_hub, start_hub)
 
             for neighbor in self.neighbors[current]:
@@ -80,7 +76,7 @@ class Pathfinder:
                         heapq.heappush(pq, (new_dist, neighbor))
         return came_from, distances
 
-    def enumerate_shortest_paths(self, came_from: dict[str, list[str]]) -> list[list[str]]:
+    def enumerate_shortest_paths(self, came_from: dict[str, list[str]])-> list[list[str]]:
         start_hub = self.graph.start_hub
         end_hub = self.graph.end_hub
         paths: list[list[str]] = []
@@ -113,5 +109,3 @@ class Pathfinder:
             drone_paths[i] = path[::-1]
             i += 1
         return drone_paths
-
-    

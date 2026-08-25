@@ -1,4 +1,4 @@
-import argparse
+from pathlib import Path
 from src.models.hubs import Hub
 from src.models.graph import Graph
 from src.models.connections import Connection
@@ -8,18 +8,35 @@ VALID_HUBS = ["start_hub:", "hub:", "end_hub:"]
 VALID_CONNECTION = ["connection:"]
 VALID_METADATA_HUB = ["zone", "color", "max_drones"]
 
-def map_picker():
-    parser = argparse.ArgumentParser(
-        description="Fly-in: Implementation of pathfinder with the least number of turns"
+def map_picker() -> str:
+    maps_dir: str = Path("maps")
+    map_files = sorted(
+        maps_dir.glob("*/*.txt"),
+        key=lambda path: (
+            {"easy": 0, "medium": 1, "hard": 2, "challenger": 3}.get(path.parent.name, 99),
+            path.name,
+        ),
     )
 
-    parser.add_argument(
-        "--input",
-        default="maps/easy/01_linear_path.txt",
-        help="Default map for program execution",
-    )
-    return parser.parse_args()
+    if not map_files:
+        print(f"No map files found under '{maps_dir}'.")
+        raise SystemExit(1)
 
+    print("Available maps:")
+    for i, path in enumerate(map_files, start=1):
+        print(f"  {i}. {path.relative_to(maps_dir)}")
+
+    while True:
+        choice: Any = input(f"\nPick a map (1-{len(map_files)}): ").strip()
+        try:
+            index = int(choice)
+        except ValueError:
+            print("Please enter a number.")
+            continue
+
+        if 1 <= index <= len(map_files):
+            return str(map_files[index - 1])
+        print(f"Please enter a number between 1 and {len(map_files)}.")
 
 class Parser:
 
@@ -29,16 +46,15 @@ class Parser:
         self.hub_name: list[str] = []
 
     def parse_lines(self, map_data: list[str]) -> list[str]:
-        nb_drones: int = 0
         hubs: list[str] = []
         connect: list[str] = []
         valid_lines: list[str] = []
         for line in map_data:
             if line.startswith('#') or line == '\n':
                 continue
-            splitted = line.split(' ')
+            splitted: list[str] = line.split(' ')
             if line.startswith('nb_drones:'):
-                if nb_drones == 0 and len(splitted) == 2:
+                if self.nb_drones == 0 and len(splitted) == 2:
                     try:
                         x = int(splitted[1])
                         if x < 1:
@@ -53,7 +69,6 @@ class Parser:
                             "ERROR: Number of drones should be an int."
                         )
                     valid_lines.append(line.strip('\n'))
-                    nb_drones = 1
                     continue
                 else:
                     raise Exception(
@@ -101,7 +116,7 @@ class Parser:
             )
         return valid_lines
 
-    def parse_data(self, valid_lines: list[str]):
+    def parse_data(self, valid_lines: list[str]) -> Graph:
         splitted: list[str] = []
         hub_name_checker: list[str] = []
         metadata_dict: dict[str, str] = {}
@@ -110,7 +125,7 @@ class Parser:
 
         for line in valid_lines:
             metadata_dict = {}
-            splitted = line.split()
+            splitted: list[str] = line.split()
             if splitted[0] in VALID_HUBS:
                 try:
                     a = int(splitted[2])
