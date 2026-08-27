@@ -5,7 +5,7 @@ from src.visualizer.visualizer import Visualizer
 import sys
 
 
-def main():
+def main() -> None:
     map_path = map_picker()
     parse = Parser()
     data: list[str] = []
@@ -17,19 +17,17 @@ def main():
                     continue
                 data.append(line)
     except (FileNotFoundError, PermissionError) as e:
-        sys.exit(e)
+        print(e)
+        sys.exit(1)
     try:
         valid_lines = parse.parse_lines(data)
         graph = parse.parse_data(valid_lines)
     except Exception as e:
-        sys.exit(e)
+        print(e)
+        sys.exit(1)
 
     path_finder = Pathfinder(graph)
-    came_from, distances = path_finder.dijkstra()
-
-    if distances[graph.end_hub] == float('inf'):
-        sys.exit("No path found between start_hub and end_hub.")
-
+    came_from = path_finder.dijkstra()
     paths = path_finder.enumerate_shortest_paths(came_from)
     for p in paths:
         print(p)

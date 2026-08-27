@@ -1,0 +1,15 @@
+[project]
+name = "fly-in-42belgium"
+version = "0.1.0"
+description = "Fly-in: pathfinder and drone scheduling simulation"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "pygame>=2.5"
+]
+
+[dependency-groups]
+dev = [
+  "flake8>=7.0",
+  "mypy>=1.10",
+]
