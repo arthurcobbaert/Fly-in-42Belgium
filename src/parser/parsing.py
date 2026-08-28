@@ -160,7 +160,7 @@ class Parser:
                         name=splitted[1],
                         x=a,
                         y=b,
-                        color=metadata_dict.get('color', 'blue'),
+                        color=metadata_dict.get('color'),
                         zone_type=metadata_dict.get('zone', 'normal'),
                         max_drones=self.nb_drones,
                     )
@@ -170,7 +170,7 @@ class Parser:
                         name=splitted[1],
                         x=a,
                         y=b,
-                        color=metadata_dict.get('color', 'blue'),
+                        color=metadata_dict.get('color'),
                         zone_type=metadata_dict.get('zone', 'normal'),
                         max_drones=int(metadata_dict.get('max_drones', 1)),
                     )

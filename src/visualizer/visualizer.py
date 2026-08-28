@@ -3,6 +3,32 @@ import math
 import sys
 from src.models.graph import Graph
 
+
+def resolve_color(
+        name: str | None,
+        fallback: tuple[int, int, int]
+) -> tuple[int, int, int]:
+    """
+    Resolve a map-provided color string (e.g. 'green', 'brown', any word) to
+    an RGB tuple. Falls back to `fallback` if no color was given, or if the
+    word isn't a color pygame recognizes — since the subject allows ANY
+    single-word string, an unrecognized word must not crash, so it gets a
+    stable, deterministic pseudo-color derived from the string itself.
+    """
+    if not name:
+        return fallback
+    try:
+        c = pygame.Color(name)
+        return (c.r, c.g, c.b)
+    except ValueError:
+        h = sum(ord(ch) for ch in name.lower())
+        return (
+            (h * 37) % 200 + 40,
+            (h * 59) % 200 + 40,
+            (h * 83) % 200 + 40,
+        )
+
+
 ZONE_COLORS = {
     "normal": (86, 156, 214),
     "priority": (64, 224, 208),
@@ -179,21 +205,25 @@ class Visualizer:
 
         for name, hub in self.graph.hubs.items():
             pos = self.positions[name]
-            color = ZONE_COLORS.get(hub.zone_type, ZONE_COLORS["normal"])
+            zone_color = ZONE_COLORS.get(hub.zone_type, ZONE_COLORS["normal"])
+            fill_color = resolve_color(hub.color, fallback=zone_color)
 
             glow = pygame.Surface(
                 (GLOW_RADIUS * 2, GLOW_RADIUS * 2), pygame.SRCALPHA
             )
             pygame.draw.circle(
-                glow, (*color, 60), (GLOW_RADIUS, GLOW_RADIUS), GLOW_RADIUS
+                glow,
+                (*zone_color, 60),
+                (GLOW_RADIUS, GLOW_RADIUS),
+                GLOW_RADIUS
             )
             self.screen.blit(
                 glow, (pos[0] - GLOW_RADIUS, pos[1] - GLOW_RADIUS)
             )
 
-            pygame.draw.circle(self.screen, color, pos, HUB_RADIUS)
+            pygame.draw.circle(self.screen, fill_color, pos, HUB_RADIUS)
             pygame.draw.circle(
-                self.screen, (250, 250, 250), pos, HUB_RADIUS, 2
+                self.screen, zone_color, pos, HUB_RADIUS, 3
             )
 
             label = self.font.render(name, True, TEXT_COLOR)
@@ -232,10 +262,3 @@ class Visualizer:
             True, TEXT_COLOR,
         )
         self.screen.blit(header, (14, 12))
-
-        legend_y = WINDOW_SIZE[1] - 26
-        for i, (zone, color) in enumerate(ZONE_COLORS.items()):
-            box_x = 14 + i * 150
-            pygame.draw.circle(self.screen, color, (box_x, legend_y), 8)
-            label = self.font.render(zone, True, TEXT_COLOR)
-            self.screen.blit(label, (box_x + 14, legend_y - 8))

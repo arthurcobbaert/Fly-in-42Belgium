@@ -8,6 +8,6 @@ class Hub:
     name: str
     x: int
     y: int
-    color: str
+    color: str | None
     zone_type: str
     max_drones: int
