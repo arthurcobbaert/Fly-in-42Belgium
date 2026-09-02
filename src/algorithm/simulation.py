@@ -20,7 +20,6 @@ class Simulation:
             tuple(sorted((conn.hub_a, conn.hub_b))): conn.max_link_capacity
             for conn in self.graph.connections
         }
-        # print(f"Link capacity: ", self.link_capacity)
 
     def sim(self) -> list[dict[int, str]]:
         events = []
@@ -46,7 +45,6 @@ class Simulation:
                         result = self.logging(drone, "wait")
                 if result is not None:
                     log.append(result)
-            # print(f"Hub occupancy: {drone.current_hub()}")
             if log:
                 print(" ".join(log))
             for drone_id, edge_key in completed:
@@ -56,8 +54,6 @@ class Simulation:
                 drone.id: drone.current_hub() for drone in self.drones
             }
             events.append(turn_snapshot)
-            # if completed:
-            #    self.update_conn(completed)
             if all(drone.status == "arrived" for drone in self.drones):
                 print(f"Turns: {self.turns}")
                 return events
@@ -78,11 +74,8 @@ class Simulation:
             if next_hub.zone_type == "restricted":
                 drone.turns_left = 1
                 drone.status = "in_transit"
-#                return self.logging(drone, "wait")
                 return False
             else:
-                # result, edges = self.complete_move(drone)
-                # return result, edges
                 return True
         return None
 
