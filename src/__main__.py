@@ -3,6 +3,7 @@ from src.algorithm.pathfinder import Pathfinder
 from src.algorithm.simulation import Simulation
 from src.visualizer.visualizer import Visualizer
 import sys
+from pathlib import Path
 
 
 def main() -> None:
@@ -38,8 +39,12 @@ def main() -> None:
     simulation = Simulation(graph, drone_paths)
     events = simulation.sim()
 
+    map_file = Path(map_path)
+    pretty = map_file.stem.lstrip("0123456789_").replace("_", " ").title()
     viz = Visualizer(
-        graph, events, drone_ids=list(drone_paths.keys()), seconds_per_turn=0.8
+        graph, events, drone_ids=list(drone_paths.keys()),
+        seconds_per_turn=0.8,
+        map_name=f"{map_file.parent.name.capitalize()} · {pretty}",
     )
     viz.run()
 
